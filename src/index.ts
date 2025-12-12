@@ -44,6 +44,124 @@ export = function (app: SignalKApp): SignalKPlugin {
     movingForecastEngaged: false,
   };
 
+  // Meteoblue pictocode mappings
+  // Hourly pictocodes: 1-35, Daily pictocodes: 1-17
+  // See: https://docs.meteoblue.com/en/meteo/variables/pictograms
+  // Icons available at: https://docs.meteoblue.com/en/meteo/variables/pictograms (downloadable ZIP)
+
+  // Short descriptions (WeatherFlow-style, ~17 unique values)
+  const pictocodeDescriptions: Record<number, string> = {
+    1: "Clear",
+    2: "Clear",
+    3: "Clear",
+    4: "Mostly Clear",
+    5: "Mostly Clear",
+    6: "Mostly Clear",
+    7: "Partly Cloudy",
+    8: "Partly Cloudy",
+    9: "Partly Cloudy",
+    10: "Partly Cloudy",
+    11: "Partly Cloudy",
+    12: "Partly Cloudy",
+    13: "Hazy",
+    14: "Hazy",
+    15: "Hazy",
+    16: "Foggy",
+    17: "Foggy",
+    18: "Foggy",
+    19: "Mostly Cloudy",
+    20: "Mostly Cloudy",
+    21: "Mostly Cloudy",
+    22: "Cloudy",
+    23: "Rainy",
+    24: "Snow",
+    25: "Heavy Rain",
+    26: "Heavy Snow",
+    27: "Thunderstorms",
+    28: "Thunderstorms",
+    29: "Snow Storm",
+    30: "Thunderstorms",
+    31: "Showers",
+    32: "Snow Showers",
+    33: "Light Rain",
+    34: "Light Snow",
+    35: "Wintry Mix",
+  };
+
+  // Long descriptions (full Meteoblue descriptions)
+  const pictocodeLongDescriptions: Record<number, string> = {
+    1: "Clear, cloudless sky",
+    2: "Clear, few cirrus",
+    3: "Clear with cirrus",
+    4: "Clear with few low clouds",
+    5: "Clear with few low clouds and few cirrus",
+    6: "Clear with few low clouds and cirrus",
+    7: "Partly cloudy",
+    8: "Partly cloudy and few cirrus",
+    9: "Partly cloudy and cirrus",
+    10: "Mixed with some thunderstorm clouds possible",
+    11: "Mixed with few cirrus and some thunderstorm clouds possible",
+    12: "Mixed with cirrus and some thunderstorm clouds possible",
+    13: "Clear but hazy",
+    14: "Clear but hazy with few cirrus",
+    15: "Clear but hazy with cirrus",
+    16: "Fog or low stratus clouds",
+    17: "Fog or low stratus clouds with few cirrus",
+    18: "Fog or low stratus clouds with cirrus",
+    19: "Mostly cloudy",
+    20: "Mostly cloudy and few cirrus",
+    21: "Mostly cloudy and cirrus",
+    22: "Overcast",
+    23: "Overcast with rain",
+    24: "Overcast with snow",
+    25: "Overcast with heavy rain",
+    26: "Overcast with heavy snow",
+    27: "Rain, thunderstorms likely",
+    28: "Light rain, thunderstorms likely",
+    29: "Storm with heavy snow",
+    30: "Heavy rain, thunderstorms likely",
+    31: "Mixed with showers",
+    32: "Mixed with snow showers",
+    33: "Overcast with light rain",
+    34: "Overcast with light snow",
+    35: "Overcast with mixture of snow and rain",
+  };
+
+  // Get weather description from pictocode, with fallback
+  const getWeatherDescription = (
+    pictocode: number | undefined,
+    fallback: string,
+  ): string => {
+    if (pictocode !== undefined && pictocodeDescriptions[pictocode]) {
+      return pictocodeDescriptions[pictocode];
+    }
+    return fallback;
+  };
+
+  // Get long weather description from pictocode, with fallback
+  const getWeatherLongDescription = (
+    pictocode: number | undefined,
+    fallback: string,
+  ): string => {
+    if (pictocode !== undefined && pictocodeLongDescriptions[pictocode]) {
+      return pictocodeLongDescriptions[pictocode];
+    }
+    return fallback;
+  };
+
+  // Get icon path from pictocode and daylight status
+  // Icons from Meteoblue use zero-padded pictocode: 01_day.svg, 09_night.svg
+  // Served from plugin route: /plugins/signalk-meteoblue/icons/meteoblue/{style}/{filename}
+  const getWeatherIcon = (
+    pictocode: number | undefined,
+    isDaylight: boolean | number | undefined,
+  ): string | undefined => {
+    if (pictocode === undefined) return undefined;
+    const paddedCode = pictocode.toString().padStart(2, "0");
+    const dayNight = isDaylight === true || isDaylight === 1 ? "day" : "night";
+    return `${paddedCode}_${dayNight}.svg`;
+  };
+
   // Configuration schema
   plugin.schema = {
     type: "object",
@@ -487,24 +605,27 @@ export = function (app: SignalKApp): SignalKPlugin {
     return {
       date: forecastData.timestamp || new Date().toISOString(),
       type: "observation",
-      description: "Meteoblue marine weather observation",
+      description: getWeatherDescription(
+        forecastData.pictocode,
+        "Meteoblue weather",
+      ),
+      longDescription: getWeatherLongDescription(
+        forecastData.pictocode,
+        "Meteoblue weather forecast",
+      ),
+      icon: getWeatherIcon(forecastData.pictocode, forecastData.isdaylight),
       outside: {
         temperature: forecastData.temperature, // Already in Kelvin
         pressure: forecastData.sealevelpressure, // Already in Pascal
-        relativeHumidity: forecastData.relativehumidity
-          ? forecastData.relativehumidity * 100
-          : undefined, // Convert ratio to %
+        relativeHumidity: forecastData.relativehumidity, // Already ratio 0-1
         uvIndex: forecastData.uvindex,
-        cloudCover: forecastData.cloudcover
-          ? forecastData.cloudcover * 100
-          : undefined, // Convert ratio to %
-        precipitationVolume: forecastData.precipitation
-          ? forecastData.precipitation * 1000
-          : undefined, // Convert m to mm
+        cloudCover: forecastData.cloudcover, // Already ratio 0-1
+        precipitationVolume: forecastData.precipitation, // Already in meters
         feelsLikeTemperature: forecastData.felttemperature,
         horizontalVisibility: forecastData.visibility,
         dewPointTemperature:
           forecastData.dewpoint || forecastData.dewpointtemperature,
+        precipitationProbability: forecastData.precipitation_probability,
         pressureTendency:
           forecastData.pressure_trend || forecastData.sealevelpressure_trend
             ? (forecastData.pressure_trend ||
@@ -523,18 +644,10 @@ export = function (app: SignalKApp): SignalKPlugin {
         extraterrestrialSolarRadiation:
           forecastData.extraterrestrial_solar_radiation,
         // Enhanced cloud data
-        totalCloudCover: forecastData.total_cloud_cover
-          ? forecastData.total_cloud_cover * 100
-          : undefined,
-        lowCloudCover: forecastData.low_cloud_cover
-          ? forecastData.low_cloud_cover * 100
-          : undefined,
-        midCloudCover: forecastData.mid_cloud_cover
-          ? forecastData.mid_cloud_cover * 100
-          : undefined,
-        highCloudCover: forecastData.high_cloud_cover
-          ? forecastData.high_cloud_cover * 100
-          : undefined,
+        totalCloudCover: forecastData.total_cloud_cover, // Already ratio 0-1
+        lowCloudCover: forecastData.low_cloud_cover, // Already ratio 0-1
+        midCloudCover: forecastData.mid_cloud_cover, // Already ratio 0-1
+        highCloudCover: forecastData.high_cloud_cover, // Already ratio 0-1
         cloudBaseHeight: forecastData.cloud_base_height,
         cloudTopHeight: forecastData.cloud_top_height,
       },
@@ -578,7 +691,7 @@ export = function (app: SignalKApp): SignalKPlugin {
       },
       sun: {
         sunshineDuration: forecastData.sunshine_duration,
-        isDaylight: forecastData.isdaylight,
+        isDaylight: forecastData.isdaylight === 1, // Convert to boolean
       },
       current: {
         drift: Math.sqrt(
@@ -605,38 +718,32 @@ export = function (app: SignalKApp): SignalKPlugin {
       return {
         date: forecastData.timestamp || new Date().toISOString(),
         type: "daily",
-        description: "Meteoblue marine weather daily forecast",
+        description: getWeatherDescription(
+          forecastData.pictocode,
+          "Meteoblue weather",
+        ),
+        longDescription: getWeatherLongDescription(
+          forecastData.pictocode,
+          "Meteoblue weather forecast",
+        ),
+        icon: getWeatherIcon(forecastData.pictocode, true), // Daily forecasts use day icons
         outside: {
           temperature: forecastData.temperature_mean,
           maxTemperature: forecastData.temperature_max,
           minTemperature: forecastData.temperature_min,
           feelsLikeTemperature: forecastData.felttemperature_mean,
           pressure: forecastData.sealevelpressure_mean,
-          relativeHumidity: forecastData.relativehumidity_mean
-            ? forecastData.relativehumidity_mean * 100
-            : undefined,
+          relativeHumidity: forecastData.relativehumidity_mean, // Already ratio 0-1
           uvIndex: forecastData.uvindex,
-          precipitationVolume: forecastData.precipitation
-            ? forecastData.precipitation * 1000
-            : undefined,
+          precipitationVolume: forecastData.precipitation, // Already in meters
           dewPointTemperature: forecastData.dewpoint_mean,
           horizontalVisibility: forecastData.visibility_mean,
           precipitationProbability: forecastData.precipitation_probability,
-          cloudCover: forecastData.cloudcover_mean
-            ? forecastData.cloudcover_mean * 100
-            : undefined,
-          totalCloudCover: forecastData.total_cloud_cover_mean
-            ? forecastData.total_cloud_cover_mean * 100
-            : undefined,
-          lowCloudCover: forecastData.low_cloud_cover_mean
-            ? forecastData.low_cloud_cover_mean * 100
-            : undefined,
-          midCloudCover: forecastData.mid_cloud_cover_mean
-            ? forecastData.mid_cloud_cover_mean * 100
-            : undefined,
-          highCloudCover: forecastData.high_cloud_cover_mean
-            ? forecastData.high_cloud_cover_mean * 100
-            : undefined,
+          cloudCover: forecastData.cloudcover_mean, // Already ratio 0-1
+          totalCloudCover: forecastData.total_cloud_cover_mean, // Already ratio 0-1
+          lowCloudCover: forecastData.low_cloud_cover_mean, // Already ratio 0-1
+          midCloudCover: forecastData.mid_cloud_cover_mean, // Already ratio 0-1
+          highCloudCover: forecastData.high_cloud_cover_mean, // Already ratio 0-1
           solarRadiation: forecastData.solarradiation_mean,
           directNormalIrradiance: forecastData.irradiance_direct_normal_max,
           diffuseHorizontalIrradiance:
@@ -684,7 +791,7 @@ export = function (app: SignalKApp): SignalKPlugin {
       // Handle hourly/point forecast - use the existing conversion
       const baseData = convertToWeatherAPIObservation(forecastData);
       baseData.type = type;
-      baseData.description = `Meteoblue marine weather ${type} forecast`;
+      // Description is already set by convertToWeatherAPIObservation using pictocode
       return baseData;
     }
   };
@@ -947,9 +1054,13 @@ export = function (app: SignalKApp): SignalKPlugin {
     } else if (parameterName.includes("humidity")) {
       units = "ratio";
       description = "Humidity forecast (0-1)";
+    } else if (parameterName === "precipitation_hours") {
+      units = "h";
+      description = "Hours with precipitation";
     } else if (
       parameterName.includes("precipitation") &&
-      !parameterName.includes("probability")
+      !parameterName.includes("probability") &&
+      !parameterName.includes("hours")
     ) {
       units = "m";
       description = "Precipitation forecast";
@@ -1509,7 +1620,10 @@ export = function (app: SignalKApp): SignalKPlugin {
             forecast[field] = celsiusToKelvin(value as number);
           } else if (field.includes("direction") || field === "winddirection") {
             forecast[field] = degToRad(value as number);
-          } else if (field === "precipitation") {
+          } else if (
+            field === "precipitation" ||
+            field === "convective_precipitation"
+          ) {
             forecast[field] = mmToM(value as number);
           } else if (
             field.includes("pressure") ||
@@ -1593,7 +1707,10 @@ export = function (app: SignalKApp): SignalKPlugin {
             forecast[field] = celsiusToKelvin(value as number);
           } else if (field.includes("direction") || field === "winddirection") {
             forecast[field] = degToRad(value as number);
-          } else if (field === "precipitation") {
+          } else if (
+            field === "precipitation" ||
+            field === "convective_precipitation"
+          ) {
             forecast[field] = mmToM(value as number);
           } else if (
             field.includes("pressure") ||
@@ -2255,7 +2372,12 @@ export = function (app: SignalKApp): SignalKPlugin {
         );
 
         try {
-          const maxCount = options?.maxCount || 5;
+          // Default to configured max hours/days if not specified
+          const defaultCount =
+            type === "daily"
+              ? state.currentConfig?.maxForecastDays || 10
+              : state.currentConfig?.maxForecastHours || 72;
+          const maxCount = options?.maxCount || defaultCount;
           const forecasts: WeatherData[] = [];
 
           // Check if forecast type is enabled in configuration

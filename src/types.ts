@@ -40,6 +40,7 @@ export interface SignalKPlugin {
   schema: Record<string, unknown>;
   start: (options: Partial<PluginConfig>, restartPlugin?: () => void) => void;
   stop: () => void;
+  registerWithRouter?: (router: any) => void;
   config?: PluginConfig;
 }
 
@@ -344,6 +345,8 @@ export type WeatherDataType = WeatherForecastType | "observation";
 
 export interface WeatherData {
   description?: string;
+  longDescription?: string;
+  icon?: string;
   date: string;
   type: WeatherDataType;
   current?: {

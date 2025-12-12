@@ -385,36 +385,101 @@ All packages publish to the same SignalK paths but with different source identif
 
 The source label indicates which Meteoblue package the data originated from, allowing consumers to choose data from specific packages or combine data from multiple sources as needed.
 
-## Weather API Provider
+## Weather API
 
-This plugin also implements most of the SignalK Weather API v2 specifications.
+The plugin provides standardized access to Meteoblue data through the SignalK Weather API endpoints:
 
-### Available Endpoints
+### Endpoints
 
-When the plugin is running, the following Weather API endpoints become available:
+- **Observations**: `GET /signalk/v2/api/weather/observations?lat=LAT&lon=LON`
+- **Point Forecasts**: `GET /signalk/v2/api/weather/forecasts/point?lat=LAT&lon=LON`
+- **Daily Forecasts**: `GET /signalk/v2/api/weather/forecasts/daily?lat=LAT&lon=LON`
+- **Weather Warnings**: `GET /signalk/v2/api/weather/warnings?lat=LAT&lon=LON`
 
-- `GET /signalk/v2/api/weather/observations?lat=37.7749&lon=-122.4194`
-- `GET /signalk/v2/api/weather/forecasts/daily?lat=37.7749&lon=-122.4194&count=7`
-- `GET /signalk/v2/api/weather/forecasts/point?lat=37.7749&lon=-122.4194&count=24`
-- `GET /signalk/v2/api/weather/warnings?lat=37.7749&lon=-122.4194`
+### Parameters
 
-**Important**: The `lat` and `lon` parameters are **ignored** by this implementation. Instead of fetching weather data for the requested coordinates, the API returns the vessel-centric forecast data that the plugin has already cached in the SignalK data tree. This data is based on the vessel's current position or predicted positions along its route.
+- `lat` - Latitude (decimal degrees)
+- `lon` - Longitude (decimal degrees)
+- `maxCount` - Maximum number of records to return (optional)
+- `provider` - Provider ID to use (optional, use `signalk-meteoblue` for this plugin)
 
-### Provider Information
+### Weather API Implementation Limitations
 
-- **Provider Name**: "Meteoblue Marine Weather"
-- **Provider ID**: Determined by SignalK server based on plugin ID
+**Important**: This implementation has specific behaviors that differ from typical weather APIs:
 
-### Data Sources
+**For Observations**:
+- Meteoblue does not provide current observations, only forecasts
+- Always returns an empty array as per Weather API specification
 
-The Weather API responses are generated from the Meteoblue data that the plugin stores in SignalK paths, ensuring consistency between direct data access and API responses.
+**For Forecasts**:
+- **Position parameters are IGNORED** - The `lat` and `lon` parameters in forecast requests are not used
+- Always returns the vessel's cached forecast data regardless of requested coordinates
+- **No new API calls** - Returns cached data from periodic Meteoblue API calls
+- Forecasts represent weather at the vessel's current or predicted positions
 
-### Benefits of Dual Compatibility
+**For Warnings**:
+- Weather warnings are not currently supported by this implementation
+- Always returns an empty array
 
-1. **Existing Functionality**: All current features continue to work unchanged
+This vessel-centric approach prioritizes marine use cases where forecasts follow the vessel's position and predicted route, providing immediate access to cached data without additional API costs.
+
+### Multiple Provider Support
+
+Use `?provider=signalk-meteoblue` to explicitly request Meteoblue data:
+
+```
+GET /signalk/v2/api/weather/forecasts/point?lat=41.349&lon=-72.100&provider=signalk-meteoblue
+GET /signalk/v2/api/weather/forecasts/daily?lat=41.349&lon=-72.100&maxCount=7&provider=signalk-meteoblue
+```
+
+To list all registered weather providers:
+
+```
+GET /signalk/v2/api/weather/_providers
+```
+
+Compatible with other weather providers (e.g., signalk-weatherflow for station-based observations).
+
+### Data Format
+
+Weather API responses follow the SignalK Weather API specification with proper unit conversions:
+
+```json
+{
+  "date": "2025-09-22T12:00:00.000Z",
+  "type": "point",
+  "description": "Partly Cloudy",
+  "outside": {
+    "temperature": 293.15,
+    "pressure": 101325,
+    "relativeHumidity": 0.65,
+    "feelsLikeTemperature": 292.15,
+    "uvIndex": 5,
+    "precipitationVolume": 0,
+    "precipitationProbability": 0.1
+  },
+  "wind": {
+    "speedTrue": 5.2,
+    "directionTrue": 1.57,
+    "gust": 8.1
+  },
+  "water": {
+    "seaSurfaceTemperature": 291.15,
+    "significantWaveHeight": 1.2,
+    "swellHeight": 0.8,
+    "swellPeriod": 8,
+    "swellDirection": 2.35
+  }
+}
+```
+
+### Benefits of Weather API Integration
+
+1. **Standardized Access**: Works with any SignalK application that supports the Weather API
 2. **Best Performance**: Weather API responses use cached vessel forecast data for immediate availability
 3. **Marine Advantages**: Unique vessel movement prediction capabilities available via API
 4. **No Additional API Costs**: Weather API requests don't trigger new Meteoblue API calls - they use existing cached data
+5. **Multiple Providers**: Can be used alongside other weather plugins like signalk-weatherflow
 
 ## Troubleshooting
 
