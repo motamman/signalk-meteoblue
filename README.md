@@ -110,36 +110,36 @@ The plugin publishes weather data to the following SignalK paths:
   - For moving vessels: Each forecast uses predicted position for that time period
 
 #### Basic Package Parameters:
-- `temperature`, `felttemperature`: Temperature data (Kelvin)
-- `windspeed`, `winddirection`: Basic wind data (m/s, radians)
-- `precipitation`, `precipitation_probability`: Precipitation data (meters, ratio 0-1)
+- `airTemperature`, `feelsLike`: Temperature data (Kelvin)
+- `windAvg`, `windDirection`: Basic wind data (m/s, radians)
+- `precip`, `precipProbability`: Precipitation data (meters, ratio 0-1)
 - `pictocode`: Meteoblue weather codes
-- `relativehumidity`: Humidity (ratio 0-1)
-- `sealevelpressure`, `surfaceairpressure`: Pressure data (Pascals)
-- `uvindex`: UV index values
-- `isdaylight`, `rainspot`, `convective_precipitation`, `snowfraction`: Additional basic fields
+- `relativeHumidity`: Humidity (ratio 0-1)
+- `seaLevelPressure`, `stationPressure`: Pressure data (Pascals)
+- `uvIndex`: UV index values
+- `isDaylight`, `rainSpot`, `convectivePrecip`, `snowFraction`: Additional basic fields
 
 #### Sea Package Parameters:
-- `seasurfacetemperature`: Sea surface temperature (Kelvin)
-- `significantwaveheight`, `surfwave_height`, `windwave_height`: Wave heights (meters)
-- `swell_significantheight`: Swell wave height (meters)
-- `mean_waveperiod`, `windwave_meanperiod`, `swell_meanperiod`: Wave periods (seconds)
-- `mean_wavedirection`, `windwave_direction`, `swell_meandirection`: Wave directions (radians)
-- `douglas_seastate`: Douglas sea state scale
-- `currentvelocity_u`, `currentvelocity_v`: Ocean current components (m/s)
+- `seaSurfaceTemperature`: Sea surface temperature (Kelvin)
+- `significantWaveHeight`, `surfWaveHeight`, `windWaveHeight`: Wave heights (meters)
+- `swellSignificantHeight`: Swell wave height (meters)
+- `meanWavePeriod`, `windWaveMeanPeriod`, `swellMeanPeriod`: Wave periods (seconds)
+- `meanWaveDirection`, `windWaveDirection`, `swellMeanDirection`: Wave directions (radians)
+- `douglasSeaState`: Douglas sea state scale
+- `currentVelocityU`, `currentVelocityV`: Ocean current components (m/s)
 - `salinity`: Water salinity
 
 #### Wind Package Parameters:
-- `windspeed`, `winddirection`: Wind data (m/s, radians)  
-- `gust`: Wind gusts (m/s)
-- `windspeed_80m`, `winddirection_80m`: High-altitude wind data (m/s, radians)
-- `airdensity`: Air density (kg/m³)
-- `surfaceairpressure`, `sealevelpressure`: Pressure data (Pascals)
+- `windAvg`, `windDirection`: Wind data (m/s, radians)
+- `windGust`: Wind gusts (m/s)
+- `windAvg80m`, `windDirection80m`: High-altitude wind data (m/s, radians)
+- `airDensity`: Air density (kg/m³)
+- `stationPressure`, `seaLevelPressure`: Pressure data (Pascals)
 
 #### Solar Package Parameters:
-- `uvindex`: UV index
-- `sunshine_duration`: Sunshine duration (seconds)
-- `isdaylight`: Daylight boolean flag
+- `uvIndex`: UV index
+- `sunshineDuration`: Sunshine duration (seconds)
+- `isDaylight`: Daylight boolean flag
 
 ## Position-based Updates
 
@@ -287,32 +287,32 @@ All weather data is automatically converted to [SignalK standard units](https://
 - **Unit**: Kelvin (K) - [SignalK standard](https://signalk.org/specification/1.7.0/doc/vesselsBranch.html#environmentoutsidetemperature) for temperature
 - **Source**: Celsius ("C") from Meteoblue API
 - **Conversion**: °C + 273.15
-- **Applies to**: `temperature`, `felttemperature`, `seasurfacetemperature`
+- **Applies to**: `airTemperature`, `feelsLike`, `seaSurfaceTemperature`, `dewPoint`
 
 ### Wind Data ✅ SignalK Compliant
 - **Speed Unit**: meters per second (m/s) - [SignalK standard](https://signalk.org/specification/1.7.0/doc/vesselsBranch.html#environmentwindspeedapparent) for wind velocity
 - **Direction Unit**: radians (rad) - [SignalK standard](https://signalk.org/specification/1.7.0/doc/vesselsBranch.html#environmentwindangleapparent) for angles
 - **Source**: **"ms-1" (m/s) and "degree"** from Meteoblue API
 - **Conversion**: **NO conversion needed for speed** (already m/s), degrees × (π/180) for direction
-- **Applies to**: `windspeed`, `gust`, `windspeed_80m`, `winddirection`, `winddirection_80m`
+- **Applies to**: `windAvg`, `windGust`, `windAvg80m`, `windDirection`, `windDirection80m`
 
 ### Atmospheric Pressure ✅ SignalK Compliant
 - **Unit**: Pascal (Pa) - [SignalK standard](https://signalk.org/specification/1.7.0/doc/vesselsBranch.html#environmentoutsidepressure) for pressure
 - **Source**: hectopascal ("hPa") from Meteoblue API
 - **Conversion**: hPa × 100 (hPa = mbar)
-- **Applies to**: `sealevelpressure`, `surfaceairpressure`
+- **Applies to**: `seaLevelPressure`, `stationPressure`
 
 ### Humidity ✅ SignalK Compliant
 - **Unit**: ratio (0-1, dimensionless) - [SignalK standard](https://signalk.org/specification/1.7.0/doc/vesselsBranch.html#environmentoutsiderelativehumidity) for percentages
 - **Source**: percentage ("percent") from Meteoblue API
 - **Conversion**: % ÷ 100
-- **Applies to**: `relativehumidity`, `cloudcover`, `precipitation_probability`
+- **Applies to**: `relativeHumidity`, `cloudCover`, `precipProbability`
 
 ### Precipitation 🔸 SI Standard (SignalK not defined)
 - **Unit**: meters (m) - Standard SI unit for length/depth
 - **Source**: millimeters ("mm") from Meteoblue API
 - **Conversion**: mm ÷ 1000
-- **Applies to**: `precipitation`, `convective_precipitation`
+- **Applies to**: `precip`, `convectivePrecip`
 
 ### Wave Data 🔸 SI Standard (SignalK not defined)
 - **Height Unit**: meters (m) - Standard SI unit for length
@@ -320,31 +320,31 @@ All weather data is automatically converted to [SignalK standard units](https://
 - **Direction Unit**: radians (rad) - Standard SI unit for angles
 - **Source**: meters ("m"), seconds ("s"), and degrees ("degree") from Meteoblue API
 - **Conversion**: **NO conversion for heights/periods** (already correct), degrees × (π/180) for directions
-- **Applies to**: `significantwaveheight`, `windwave_height`, `swell_significantheight`, `mean_waveperiod`, `windwave_meanperiod`, `swell_meanperiod`, `mean_wavedirection`, `windwave_direction`, `swell_meandirection`
+- **Applies to**: `significantWaveHeight`, `windWaveHeight`, `swellSignificantHeight`, `meanWavePeriod`, `windWaveMeanPeriod`, `swellMeanPeriod`, `meanWaveDirection`, `windWaveDirection`, `swellMeanDirection`
 
-### Current Velocity 🔸 SI Standard (SignalK not defined)  
+### Current Velocity 🔸 SI Standard (SignalK not defined)
 - **Unit**: meters per second (m/s) - Standard SI unit for velocity
 - **Source**: meters per second ("m/s") from Meteoblue API
 - **Conversion**: **NO conversion needed** (already m/s)
-- **Applies to**: `currentvelocity_u`, `currentvelocity_v`
+- **Applies to**: `currentVelocityU`, `currentVelocityV`
 
 ### Density 🔸 SI Standard (SignalK not defined)
 - **Unit**: kilograms per cubic meter (kg/m³) - Standard SI unit for density
 - **Source**: kilograms per cubic meter ("kg/m³") from Meteoblue API
 - **Conversion**: **NO conversion needed** (already kg/m³)
-- **Applies to**: `airdensity`
+- **Applies to**: `airDensity`
 
 ### Dimensionless Values
 - **Unit**: scalar (no unit) - Direct numeric values
 - **Source**: Direct values from Meteoblue API
 - **Conversion**: **NO conversion needed**
-- **Applies to**: `uvindex`, `pictocode`, `douglas_seastate`, `isdaylight`, `snowfraction`
+- **Applies to**: `uvIndex`, `pictocode`, `douglasSeaState`, `isDaylight`, `snowFraction`
 
 ### Duration
 - **Unit**: seconds (s) - Standard SI unit for time
 - **Source**: seconds ("s") from Meteoblue API
 - **Conversion**: **NO conversion needed** (already seconds)
-- **Applies to**: `sunshine_duration`
+- **Applies to**: `sunshineDuration`
 
 ### Salinity 🔸 SI Standard (SignalK not defined)
 - **Unit**: ratio (dimensionless) - Practical Salinity Unit equivalent
@@ -358,11 +358,11 @@ All weather data is automatically converted to [SignalK standard units](https://
 - **Conversion**: **NO conversion needed** (already correct SI units)
 - **Applies to**: `radiation`, `radiationtotal`
 
-### Sunshine Duration 🔸 SI Standard (SignalK not defined)  
+### Sunshine Duration 🔸 SI Standard (SignalK not defined)
 - **Unit**: seconds (s) - Standard SI unit for time
 - **Source**: minutes ("minutes") from Meteoblue API
 - **Conversion**: minutes × 60
-- **Applies to**: `sunshinetime`, `sunshine_duration`
+- **Applies to**: `sunshineDuration`
 
 ### Visibility 🔸 SI Standard (SignalK not defined)
 - **Unit**: meters (m) - Standard SI unit for distance
